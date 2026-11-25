@@ -1,2 +1,2 @@
-aiocron~=2.1
-urllib3~=2.5
+aiocron==2.1
+urllib3==2.8.0
