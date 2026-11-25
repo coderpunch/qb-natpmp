@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "commitMessagePrefix": "chore(deps):",
+  "minimumReleaseAge": "3 days",
+  "platformAutomerge": false,
+  "packageRules": [
+    {
+      "description": "Automerge digest, patch and pin updates (python base image digest, PyPI pins) once the Test workflow passes; the merge then cuts a patch release (auto-release.yml). platformAutomerge is off: GitHub auto-merge is disabled and main has no required checks, so GitHub could merge before CI finishes. Minor and major updates wait for a person",
+      "matchUpdateTypes": ["digest", "patch", "pin"],
+      "automerge": true
+    },
+    {
+      "description": "One PR for all GitHub Actions bumps (helpers:pinGitHubActionDigests keeps the SHA + '# vX.Y.Z' comment current). Never automerge: new action code runs with packages: write, so a person reviews every bump. Placed after the automerge rule so this automerge: false wins",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "automerge": false
+    }
+  ]
+}

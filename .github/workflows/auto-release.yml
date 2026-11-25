@@ -1,0 +1,52 @@
+name: Auto patch release
+
+# When Renovate merges an update to a file that ends up in the image, cut the
+# next patch release and publish the image. Changes made by people are still
+# released by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - requirements.txt
+      - entrypoint.sh
+      - run.py
+      - natpmp.py
+      - qbittorrent.py
+      - health.py
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.actor == 'renovate[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - name: Create the next patch release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          latest=$(gh release view --json tagName --jq .tagName)
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          tag="v${major}.${minor}.$((patch + 1))"
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  # A release created with GITHUB_TOKEN does not trigger docker-publish.yml,
+  # so call it directly.
+  publish:
+    needs: release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
