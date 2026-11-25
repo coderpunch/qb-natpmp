@@ -1,5 +1,5 @@
 # temp stage
-FROM python:3-slim-trixie@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS builder
+FROM python:3.15-slim-trixie@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS builder
 
 # avoid stuck build due to user prompt
 ARG DEBIAN_FRONTEND=noninteractive
@@ -19,7 +19,7 @@ RUN pip3 install --upgrade pip && pip3 install --no-cache-dir wheel && pip3 inst
 
 
 ##############################################################################################
-FROM python:3-slim-trixie@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS runtime
+FROM python:3.15-slim-trixie@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS runtime
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y gosu && apt-get clean
 

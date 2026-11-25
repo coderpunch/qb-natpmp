@@ -15,6 +15,11 @@
       "automerge": true
     },
     {
+      "description": "Docker Hub serves tag timestamps to anonymous clients only for the first 1000 tags. library/python has 4000+, so Renovate falls back to the registry tag list, which has no timestamps, and under the default timestamp-required every python digest update would wait forever. Apply the 3-day age only when a timestamp exists (renovatebot/renovate#46925)",
+      "matchDatasources": ["docker"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
       "description": "One PR for all GitHub Actions bumps (helpers:pinGitHubActionDigests keeps the SHA + '# vX.Y.Z' comment current). Never automerge: new action code runs with packages: write, so a person reviews every bump. Placed after the automerge rule so this automerge: false wins",
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions",
