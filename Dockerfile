@@ -13,9 +13,10 @@ RUN mkdir /opt/app
 RUN python3 -m venv /opt/app/.venv
 ENV PATH="/opt/app/.venv/bin:$PATH"
 
-# install requirements
-COPY requirements.txt .
-RUN pip3 install --upgrade pip && pip3 install --no-cache-dir wheel && pip3 install --no-cache-dir -r requirements.txt
+# install requirements: requirements.lock pins every package with its hashes.
+# pip comes from the python base image; all packages are pure-Python wheels.
+COPY requirements.lock .
+RUN pip3 install --no-cache-dir --require-hashes -r requirements.lock
 
 
 ##############################################################################################

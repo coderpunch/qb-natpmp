@@ -1,2 +1,4 @@
-aiocron==2.1
+# Direct dependencies, pinned exactly. requirements.lock pins all packages
+# with their hashes. The image and CI install requirements.lock. Regenerate it
+# after you change this file (CONTRIBUTING.md).
 urllib3==2.8.0
