@@ -99,7 +99,7 @@ does not check the validity period of the VPN account credential.
 ## Tests
 
 ```sh
-python3 -m pip install -r requirements.txt
+python3 -m pip install --require-hashes -r requirements.lock
 python3 -m unittest discover -s tests -v
 ```
 

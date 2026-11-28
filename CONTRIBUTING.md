@@ -49,7 +49,7 @@ These commands do the same checks as the `Test` workflow. Run them before
 you open a pull request:
 
 ```sh
-python3 -m pip install -r requirements.txt
+python3 -m pip install --require-hashes -r requirements.lock
 python3 -m unittest discover -s tests -v
 docker build --tag qb-natpmp:test .
 docker run --rm --entrypoint python3 qb-natpmp:test \
@@ -57,7 +57,8 @@ docker run --rm --entrypoint python3 qb-natpmp:test \
 ```
 
 - CI uses Python 3.15. The base image in the `Dockerfile` has the same
-  Python version.
+  Python version. The header of `requirements.lock` also names it. A test
+  fails if these Python versions differ.
 - The unit tests do not need a VPN or a live qBittorrent.
 - The last command checks that the image can import all modules. It also
   checks that `health.check_health()` returns `False` when no health marker
@@ -70,7 +71,7 @@ When Renovate merges a change to a file that goes into the image,
 image:
 
 - `Dockerfile`
-- `requirements.txt`
+- `requirements.lock`
 - `entrypoint.sh`
 - `run.py`, `natpmp.py`, `qbittorrent.py` and `health.py`
 
@@ -84,6 +85,24 @@ directly, because a release from `GITHUB_TOKEN` does not start
 - `docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`.
 - It pushes `ghcr.io/coderpunch/qb-natpmp` with the tags `vX.Y.Z`, `X.Y.Z`,
   `X.Y`, `X` and `latest`.
+
+## Python dependencies
+
+`requirements.txt` pins the direct dependencies. `requirements.lock` pins all
+packages with their hashes. The image and CI install only
+`requirements.lock`, with `--require-hashes`. The image uses the `pip` of the
+Python base image.
+
+To change a dependency by hand, do these steps:
+
+1. Change the pin in `requirements.txt`.
+2. Regenerate `requirements.lock` with pip-tools. Use the Python version that
+   the header of `requirements.lock` names:
+   ```sh
+   pip-compile --allow-unsafe --generate-hashes --no-emit-index-url \
+     --output-file=requirements.lock --strip-extras requirements.txt
+   ```
+3. Run the checks in [Run the checks locally](#run-the-checks-locally).
 
 ## Secrets
 
@@ -100,7 +119,10 @@ repository secret.
 `renovate.json` configures Renovate. Renovate keeps these versions current:
 
 - The tag and the digest of the Python base image in the `Dockerfile`.
-- The pinned PyPI packages in `requirements.txt`.
+- The pinned PyPI packages in `requirements.txt`. In the same pull request,
+  Renovate regenerates `requirements.lock`.
+- All packages in `requirements.lock`. Each Monday, Renovate refreshes the
+  lock (`lockFileMaintenance`).
 - The GitHub Actions in `.github/workflows/`. Each action has a commit SHA
   and a version comment.
 
@@ -108,11 +130,12 @@ Renovate proposes a new version only after it is 3 days old. For images,
 this rule applies only if the registry gives a timestamp. Docker Hub gives
 tag timestamps to anonymous clients only for the first 1000 tags.
 `library/python` has more than 4000 tags. Thus, a rule that needs a
-timestamp blocks each Python digest update.
+timestamp blocks each Python digest update. The Monday lock refresh does not
+wait. It takes the newest version of each package.
 
 | Update | What occurs |
 | --- | --- |
-| Digest, patch and pin updates of the base image and the PyPI packages | Renovate merges the pull request after the `Test` workflow passes. Then `auto-release.yml` creates a patch release. |
+| Digest, patch and pin updates of the base image and the PyPI packages, and the Monday lock refresh | Renovate merges the pull request after the `Test` workflow passes. Then `auto-release.yml` creates a patch release. |
 | Minor and major updates | The pull request waits for a person. |
 | GitHub Actions updates | Renovate puts all of them in one pull request, "GitHub Actions". This pull request always waits for a person, because new action code runs with `packages: write`. |
 
@@ -124,8 +147,26 @@ reasons:
 - `main` has no required checks. Thus, GitHub auto-merge can merge before CI
   completes.
 
-The `Dockerfile` pins the Python minor version, `3.15`. Thus, a new Python
-minor version comes as a minor update, and it waits for a person.
+Four places name the Python minor version, `3.15`:
+
+- The two `FROM` tags in the `Dockerfile`.
+- The `python-version` in `.github/workflows/test.yml`.
+- The header of `requirements.lock`.
+
+A new Python minor version comes as one "Python version" pull request for
+these four places. This pull request waits for a person. Renovate applies
+the 3-day age to each file separately. Thus, the pull request can open with
+only some of the files. A test fails until all four places name the
+same version. Merge the pull request after the `Test` workflow passes. The
+next Monday lock refresh recompiles `requirements.lock` on the new Python.
+Renovate does not update the Python major version. A person changes it by
+hand.
+
+Renovate gets vulnerability data from OSV (`osvVulnerabilityAlerts`) and from
+the GitHub Dependabot alerts. If a package in `requirements.lock` has a known
+vulnerability, Renovate opens a fix pull request at its next run. This pull
+request has the label `security`. It does not wait for the 3-day age. The
+automerge rules in the table also apply to it.
 
 ## Conventions
 
